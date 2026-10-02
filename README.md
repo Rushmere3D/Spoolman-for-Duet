@@ -34,9 +34,9 @@ This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by E
 
 ## Bridge defaults
 
-Stable bridge default: `9377`.
+The bridge uses port `9377` by default for both stable and nightly installations.
 
-Nightly/test installations may use `9378`. The DWC plugin can discover/test both ports and also accepts a complete manual URL such as:
+The DWC plugin can discover/test supported bridge ports and also accepts a complete manual URL such as:
 
 ```text
 http://192.168.1.148:9377
