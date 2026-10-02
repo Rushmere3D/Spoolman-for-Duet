@@ -126,6 +126,12 @@ setup_service_user() {
 setup_systemd() {
   log "Creating systemd service ${SERVICE_NAME}..."
 
+  local node_bin
+  node_bin="$(command -v node)"
+  [[ -n "${node_bin}" ]] || die "Unable to locate Node.js executable"
+
+  log "Using Node.js executable: ${node_bin}"
+
   cat >"/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Spoolman for Duet Bridge
@@ -137,7 +143,7 @@ Type=simple
 User=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
 Environment=PORT=${PORT}
-ExecStart=/usr/bin/npm start
+ExecStart=${node_bin} src/index.js
 Restart=always
 RestartSec=5
 
