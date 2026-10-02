@@ -63,11 +63,13 @@ Build or download the plugin ZIP, then in DWC open **Settings → Plugins** and 
 
 ## Bridge installation
 
-Once the repository and a release are published, the stable installer can be used as follows:
+For stable releases, the bridge can be installed or updated with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rushmere3D/Spoolman-for-Duet/main/scripts/install-bridge.sh | sudo bash
 ```
+> **Note:** The stable installer only installs full stable releases. Beta and other prerelease versions should be installed using the nightly/development installer while testing.
+
 ### Nightly / development builds
 
 To install or update to the latest nightly bridge build:
