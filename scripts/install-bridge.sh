@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Spoolman for Duet Bridge (latest stable GitHub release).
+# Install or upgrade Spoolman for Duet Bridge from the latest stable GitHub release.
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/Rushmere3D/Spoolman-for-Duet/main/scripts/install-bridge.sh | sudo bash
 set -euo pipefail
@@ -63,14 +63,21 @@ version = tag.lstrip("v")
 
 for asset in release.get("assets", []):
     name = asset.get("name", "")
-    if name.startswith("spoolman-bridge-server-") and name.endswith(".zip"):
+    if name.startswith("spoolman-for-duet-bridge-") and name.endswith(".zip"):
         print(asset["browser_download_url"])
         print(version)
         sys.exit(0)
 
-print("No spoolman-bridge-server zip asset found in latest release.", file=sys.stderr)
+print("No Spoolman for Duet bridge zip asset found in latest release.", file=sys.stderr)
 sys.exit(1)
 '
+}
+
+stop_existing_service() {
+  if systemctl cat "${SERVICE_NAME}.service" >/dev/null 2>&1; then
+    log "Stopping existing ${SERVICE_NAME} service..."
+    systemctl stop "${SERVICE_NAME}"
+  fi
 }
 
 install_release() {
@@ -78,19 +85,28 @@ install_release() {
   local version="$2"
 
   log "Installing bridge server ${version} to ${INSTALL_DIR}..."
-
   require_command unzip
-  mkdir -p "${INSTALL_DIR}"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
 
-  curl -fsSL "${asset_url}" -o "${tmp_dir}/spoolman-bridge-server.zip"
-  unzip -qo "${tmp_dir}/spoolman-bridge-server.zip" -d "${tmp_dir}/extract"
+  curl -fsSL "${asset_url}" -o "${tmp_dir}/spoolman-for-duet-bridge.zip"
+  mkdir -p "${tmp_dir}/extract"
+  unzip -qo "${tmp_dir}/spoolman-for-duet-bridge.zip" -d "${tmp_dir}/extract"
 
-  rm -rf "${INSTALL_DIR:?}/"*
+  mkdir -p "${INSTALL_DIR}" "${INSTALL_DIR}/data"
+
+  # Preserve persistent settings and tracking state while replacing
+  # the bridge application files.
+  find "${INSTALL_DIR}" \
+    -mindepth 1 \
+    -maxdepth 1 \
+    ! -name data \
+    -exec rm -rf -- {} +
+
   cp -a "${tmp_dir}/extract/." "${INSTALL_DIR}/"
   mkdir -p "${INSTALL_DIR}/data"
+
   rm -rf "${tmp_dir}"
 
   cd "${INSTALL_DIR}"
@@ -102,12 +118,14 @@ setup_service_user() {
     log "Creating service user ${SERVICE_USER}..."
     useradd --system --home "${INSTALL_DIR}" --shell /usr/sbin/nologin "${SERVICE_USER}"
   fi
+
   chown -R "${SERVICE_USER}:${SERVICE_USER}" "${INSTALL_DIR}"
   chmod -R u+rwX "${INSTALL_DIR}/data" 2>/dev/null || true
 }
 
 setup_systemd() {
   log "Creating systemd service ${SERVICE_NAME}..."
+
   cat >"/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Spoolman for Duet Bridge
@@ -128,11 +146,13 @@ WantedBy=multi-user.target
 EOF
 
   systemctl daemon-reload
-  systemctl enable --now "${SERVICE_NAME}"
+  systemctl enable "${SERVICE_NAME}"
+  systemctl restart "${SERVICE_NAME}"
 }
 
 print_success() {
   local version="$1"
+
   log "Installation complete (${version})"
   log "Service: systemctl status ${SERVICE_NAME}"
   log "Health:  curl http://127.0.0.1:${PORT}/api/v1/health"
@@ -161,6 +181,7 @@ main() {
     die "Failed to resolve stable download URL. Is a stable release published?"
   fi
 
+  stop_existing_service
   install_release "${asset_url}" "${version}"
   setup_service_user
   setup_systemd
