@@ -43,3 +43,4 @@ jobs:
             dist/Spoolman-for-Duet-*.zip
             dist/spoolman-for-duet-bridge-*.zip
             scripts/install-bridge.sh
+            scripts/install-bridge-prerelease.sh
