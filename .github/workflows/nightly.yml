@@ -1,51 +1,63 @@
 name: Nightly Builds
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   nightly:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: npm
-      - run: npm install
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
-      - name: Prepare nightly asset names
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Prepare nightly packages
+        shell: bash
         run: |
-          cp dist/Spoolman-0.5.0.zip dist/Spoolman-nightly.zip
-          cp dist/spoolman-bridge-server-0.5.0.zip dist/spoolman-bridge-server-nightly.zip
+          PLUGIN_FILE=$(find dist -maxdepth 1 -name 'Spoolman-for-Duet-*.zip' -print -quit)
+          BRIDGE_FILE=$(find dist -maxdepth 1 -name 'spoolman-for-duet-bridge-*.zip' -print -quit)
+
+          cp "$PLUGIN_FILE" dist/Spoolman-for-Duet-nightly.zip
+          cp "$BRIDGE_FILE" dist/spoolman-for-duet-bridge-nightly.zip
+
       - name: Publish or update Nightly release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
           target_commitish: ${{ github.sha }}
-          name: Spoolman Nightly Builds
+          name: Spoolman for Duet - Nightly
           draft: false
           prerelease: true
           make_latest: false
           body: |
-            What is a Nightly Build?
-            Nightly builds are the latest versions of Spoolman DuetWebControl, automatically compiled after every new commit to the main branch.
-            This means each build includes the most recent changes and improvements.
-            While these builds provide early access to development progress, they may contain bugs or unstable features.
+            ## Spoolman for Duet - Nightly Build
 
-            Install latest nightly bridge server:
-            curl -fsSL https://raw.githubusercontent.com/EmilVitus/Spoolman-DuetWebControl/main/scripts/install-bridge-nightly.sh | sudo bash
+            This is a development build of Spoolman for Duet.
+
+            Nightly builds contain the latest changes and may be unstable.
+            For normal use, install the latest tagged release instead.
           files: |
-            dist/Spoolman-nightly.zip
-            dist/spoolman-bridge-server-nightly.zip
+            dist/Spoolman-for-Duet-nightly.zip
+            dist/spoolman-for-duet-bridge-nightly.zip
             scripts/install-bridge-nightly.sh
