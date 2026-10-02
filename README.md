@@ -69,6 +69,14 @@ Once the repository and a release are published, the stable installer can be use
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Rushmere3D/Spoolman-for-Duet/main/scripts/install-bridge.sh | sudo bash
 ```
+### Nightly / development builds
+
+To install or update to the latest nightly bridge build:
+
+```bash
+curl -fsSL https://github.com/Rushmere3D/Spoolman-for-Duet/releases/download/nightly/install-bridge-nightly.sh | sudo bash
+
+Nightly builds contain the latest development changes and may be unstable. For normal use, install the latest tagged release.
 
 The service runs as the dedicated `spoolman-bridge` user and stores persistent files under `/opt/spoolman-bridge/data` by default.
 
