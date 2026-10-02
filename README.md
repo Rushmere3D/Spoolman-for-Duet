@@ -1,99 +1,91 @@
-# ⚠️work in progress⚠️
+# Spoolman for Duet
 
-# Spoolman DuetWebControl Integration
+Spoolman integration for Duet printers running RepRapFirmware and Duet Web Control (DWC) 3.7.
 
-Version `0.5.0` is a clean rewrite with a server-driven architecture:
+> **Status:** `1.0.0-beta.1` — tested during development with a Duet 3 Mini 5+, RepRapFirmware 3.7.0-beta.3 and DWC 3.7.0-beta.3.
 
-- DWC plugin is a thin UI client.
-- Filament tracking runs on the bridge server, not in the browser.
-- All persistent settings are stored on the bridge server.
-- Default language is English, with support for Auto/English/Dansk.
-- Server discovery uses mDNS hostname (`spoolman-bridge.local`) with manual URL fallback.
+This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by Emil Vitus. It keeps the server-driven tracking architecture while porting the DWC frontend to the DWC 3.7 plugin API. See [NOTICE](NOTICE) for attribution.
+
+## Features
+
+- DWC 3.7 Job-page integration
+- Bridge discovery plus manual bridge URL
+- Spoolman spool listing
+- Tool-to-spool assignment
+- Server-side filament consumption tracking (browser may be closed)
+- Persistent settings and tracking state
+- RRF `rr_connect` / `rr_model` integration
+- Spoolman `/api/v1` integration
+- English / Danish / automatic language selection inherited from the upstream project
 
 ## Repository layout
 
-- `plugin/` DWC plugin payload (`plugin.json` + `dwc` assets)
-- `server/` bridge server (tracking, storage, Spoolman/RRF integration)
-- `scripts/` build helpers for plugin and server artifacts
-- `docs/` migration and operations notes
+- `plugin/` — installable DWC plugin payload
+- `server/` — Node.js bridge service
+- `scripts/` — build and Linux installation helpers
+- `docs/` — API and migration notes
 
 ## Requirements
 
-- Node.js 20+ recommended
-- Network access from bridge server to:
-  - RepRapFirmware (`rr_connect`, `rr_model`)
-  - Spoolman (`/api/v1`)
+- DWC 3.7 / RRF 3.7 (current beta target: `3.7.0-beta.3`)
+- Node.js 20+ for the bridge
+- Network access from the bridge to both the Duet and Spoolman
+- Spoolman server (default port is normally 7912)
 
-## Install bridge server (Debian/Ubuntu, one command)
+## Bridge defaults
 
-This always installs the latest stable GitHub release (no manual zip transfer):
+Stable bridge default: `9377`.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/EmilVitus/Spoolman-DuetWebControl/main/scripts/install-bridge.sh | sudo bash
+Nightly/test installations may use `9378`. The DWC plugin can discover/test both ports and also accepts a complete manual URL such as:
+
+```text
+http://192.168.1.148:9377
 ```
 
-## Install nightly test build (Debian/Ubuntu, one command)
+For many standalone RRF installations the HTTP API password is the default `reprap`, even when the DWC UI does not prompt for a password. Configure the bridge to match your printer.
 
-This always installs the latest nightly build from the fixed **Spoolman Nightly Builds** prerelease:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/EmilVitus/Spoolman-DuetWebControl/main/scripts/install-bridge-nightly.sh | sudo bash
-```
-
-Nightly defaults:
-
-- service: `spoolman-bridge-nightly`
-- install path: `/opt/spoolman-bridge-nightly`
-- port: `9378`
-
-Optional environment variables:
-
-- `SPOOLMAN_BRIDGE_INSTALL_DIR` (default: `/opt/spoolman-bridge`)
-- `SPOOLMAN_BRIDGE_PORT` (default: `9377`)
-- `SPOOLMAN_BRIDGE_REPO` (default: `EmilVitus/Spoolman-DuetWebControl`)
-
-After install:
-
-```bash
-sudo systemctl status spoolman-bridge
-curl http://127.0.0.1:9377/api/v1/health
-```
-
-## DWC plugin installation
-
-1. Build plugin artifact.
-2. In DWC open **Settings -> Plugins -> Install Plugin**.
-3. Upload `dist/Spoolman-0.5.0.zip`.
-4. Open **Job -> Spoolman** and connect/discover the bridge server.
-
-## Server settings model
-
-Stored in `server/data/settings.json`:
-
-- `language`: `auto | en | da` (default `auto`)
-- `spoolmanBaseUrl`: manual URL (required)
-- `hotendCount`: integer >= 1 (UI supports 5+)
-- `toolSpoolMap`: map (`T0`, `T1`, ...)
-- `rrf.baseUrl`, `rrf.password`, `rrf.pollIntervalMs`
-
-No browser cookies or localStorage are required for tracking or core configuration.
-
-## Developer install (from repository)
+## Build
 
 ```bash
 npm install
-npm run start --workspace server
-```
-
-Server default: `http://0.0.0.0:9377`.
-
-## Build artifacts
-
-```bash
+npm test
 npm run build
 ```
 
-This creates:
+Artifacts are written to `dist/`:
 
-- `dist/Spoolman-0.5.0.zip` (DWC plugin)
-- `dist/spoolman-bridge-server-0.5.0.zip` (server package)
+- `Spoolman-for-Duet-<version>.zip`
+- `spoolman-for-duet-bridge-<version>.zip`
+
+## DWC plugin installation
+
+Build or download the plugin ZIP, then in DWC open **Settings → Plugins** and upload the ZIP. Open **Job → Spoolman** and connect to the bridge.
+
+## Bridge installation
+
+
+Once the repository and a release are published, the stable installer can be used as follows:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Rushmere3D/Spoolman-for-Duet/main/scripts/install-bridge.sh | sudo bash
+```
+
+The service runs as the dedicated `spoolman-bridge` user and stores persistent files under `/opt/spoolman-bridge/data` by default.
+
+Useful checks:
+
+```bash
+sudo systemctl status spoolman-bridge --no-pager
+curl -s http://127.0.0.1:9377/api/v1/health
+```
+
+## Known beta notes
+
+- This is a new DWC 3.7 port and should be treated as beta until tested on a wider range of Duet/RRF configurations.
+- If migrating an existing bridge installation, ensure `data/settings.json` is writable by the service user (`spoolman-bridge`).
+
+## License and attribution
+
+GPL-3.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Based on [Spoolman-DuetWebControl](https://github.com/EmilVitus/Spoolman-DuetWebControl) by Emil Vitus.

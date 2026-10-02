@@ -1,6 +1,6 @@
 # Migration notes from old plugin
 
-The old implementation in `Spoolman-DuetWebControl_old` had useful ideas but also anti-patterns.
+The old implementation in `spoolman-for-duet_old` had useful ideas but also anti-patterns.
 Version `0.5.0` removes the following:
 
 - Browser-side tracking loops (`setInterval` in plugin)

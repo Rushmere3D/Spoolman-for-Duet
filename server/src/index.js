@@ -7,7 +7,7 @@ import { createTracker } from "./tracking/tracker.js";
 import { startMdnsAdvertisement } from "./lib/mdns.js";
 import { buildBridgeBaseUrls, getLanIPv4Addresses } from "./lib/network.js";
 
-const SERVER_VERSION = "0.5.0";
+const SERVER_VERSION = "1.0.0-beta.1";
 const PORT = Number(process.env.PORT) || 9377;
 
 const app = express();
@@ -58,7 +58,7 @@ function sanitizeSettingsUpdate(input) {
 
 function getDiscoveryPayload() {
   const lanAddresses = getLanIPv4Addresses();
-  const knownPorts = [9378, 9377];
+  const knownPorts = Array.from(new Set([PORT, 9377, 9378]));
   const suggestedUrls = [];
   for (const address of lanAddresses) {
     for (const port of knownPorts) {
@@ -79,7 +79,7 @@ function getDiscoveryPayload() {
 app.get("/", (_req, res) => {
   const discovery = getDiscoveryPayload();
   res.json({
-    service: "Spoolman DWC Bridge Server",
+    service: "Spoolman for Duet Bridge",
     version: SERVER_VERSION,
     health: "/api/v1/health",
     api: "/api/v1",
@@ -90,7 +90,7 @@ app.get("/", (_req, res) => {
 
 app.get("/api/v1/info", (_req, res) => {
   res.json({
-    name: "Spoolman DWC Bridge Server",
+    name: "Spoolman for Duet Bridge",
     version: SERVER_VERSION,
     apiVersion: "v1",
     discoveryHost: "spoolman-bridge.local",
@@ -222,17 +222,26 @@ app.get("/api/v1/discovery", (_req, res) => {
 
 const mdns = startMdnsAdvertisement({ port: PORT, version: SERVER_VERSION });
 const server = app.listen(PORT, () => {
-  console.log(`Spoolman DWC bridge server 0.5.0 listening on port ${PORT}`);
+  console.log(`Spoolman for Duet bridge ${SERVER_VERSION} listening on port ${PORT}`);
 });
 
 if (trackingState.trackingEnabled) {
   tracker.start();
 }
 
+let shuttingDown = false;
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}; shutting down...`);
     tracker.stop();
     mdns.close();
-    server.close(() => process.exit(0));
+    const forceExit = setTimeout(() => process.exit(0), 3000);
+    forceExit.unref();
+    server.close(() => {
+      clearTimeout(forceExit);
+      process.exit(0);
+    });
   });
 }

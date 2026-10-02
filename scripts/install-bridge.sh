@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Install Spoolman DWC Bridge Server (latest stable GitHub release).
+# Install Spoolman for Duet Bridge (latest stable GitHub release).
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/EmilVitus/Spoolman-DuetWebControl/main/scripts/install-bridge.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/Rushmere3D/Spoolman-for-Duet/main/scripts/install-bridge.sh | sudo bash
 set -euo pipefail
 
-GITHUB_REPO="${SPOOLMAN_BRIDGE_REPO:-EmilVitus/Spoolman-DuetWebControl}"
+GITHUB_REPO="${SPOOLMAN_BRIDGE_REPO:-Rushmere3D/Spoolman-for-Duet}"
 INSTALL_DIR="${SPOOLMAN_BRIDGE_INSTALL_DIR:-/opt/spoolman-bridge}"
 SERVICE_NAME="${SPOOLMAN_BRIDGE_SERVICE:-spoolman-bridge}"
 PORT="${SPOOLMAN_BRIDGE_PORT:-9377}"
@@ -103,13 +103,14 @@ setup_service_user() {
     useradd --system --home "${INSTALL_DIR}" --shell /usr/sbin/nologin "${SERVICE_USER}"
   fi
   chown -R "${SERVICE_USER}:${SERVICE_USER}" "${INSTALL_DIR}"
+  chmod -R u+rwX "${INSTALL_DIR}/data" 2>/dev/null || true
 }
 
 setup_systemd() {
   log "Creating systemd service ${SERVICE_NAME}..."
   cat >"/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
 [Unit]
-Description=Spoolman DWC Bridge Server
+Description=Spoolman for Duet Bridge
 After=network-online.target
 Wants=network-online.target
 

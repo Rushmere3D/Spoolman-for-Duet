@@ -1,0 +1,9 @@
+Spoolman for Duet
+
+This project is derived from Spoolman-DuetWebControl by Emil Vitus:
+https://github.com/EmilVitus/Spoolman-DuetWebControl
+
+The upstream project declares GPL-3.0 licensing. This derivative remains licensed under GPL-3.0.
+Original copyright and attribution should be preserved in accordance with the license.
+
+The DWC 3.7 frontend in this fork has been ported to the DWC 3.7 plugin API and the bridge has received compatibility and reliability fixes.
