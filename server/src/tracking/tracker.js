@@ -115,6 +115,7 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
       lastExtruderPositions: positions,
       lastMachineStatus: currentStatus,
       totalTrackedMmByTool: nextTotals,
+      totalReportedMmByTool: nextReportedTotals,
       lastPollAt: new Date().toISOString(),
       lastError: pollError,
       lastEvent: pollEvents.join(" | ")
