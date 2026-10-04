@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.resolve(__dirname, "../../data");
+const dataDir = process.env.SPOOLMAN_DATA_DIR
+  ? path.resolve(process.env.SPOOLMAN_DATA_DIR)
+  : path.resolve(__dirname, "../../data");
 const settingsFile = path.join(dataDir, "settings.json");
 const trackingStateFile = path.join(dataDir, "tracking-state.json");
 
