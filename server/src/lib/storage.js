@@ -26,6 +26,7 @@ const defaultTrackingState = Object.freeze({
   lastExtruderPositions: [],
   totalTrackedMmByTool: {},
   totalReportedMmByTool: {},
+  lastMachineStatus: "",
   lastPollAt: null,
   lastError: null,
   lastEvent: null
@@ -69,8 +70,15 @@ export async function saveSettings(nextSettings) {
 }
 
 export async function loadTrackingState() {
-  const loaded = await readJson(trackingStateFile, defaultTrackingState);
-  return mergeTrackingState(loaded);
+  try {
+    const loaded = await readJson(trackingStateFile, defaultTrackingState);
+    return mergeTrackingState(loaded);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return mergeTrackingState(defaultTrackingState);
+    }
+    throw error;
+  }
 }
 
 export async function saveTrackingState(nextState) {
