@@ -105,9 +105,63 @@ export function createRrfClient(config) {
       extruderPositions: []
     };
   }
+  async function fetchStateModel() {
+    if (!baseUrl) {
+      throw new Error("RRF base URL is not configured");
+    }
 
+    if (!sessionKey) {
+      await connect();
+    }
+
+    const headers = sessionKey ? { "X-Session-Key": sessionKey } : {};
+    const retryDelaysMs = [0, 300, 800];
+
+    for (let attempt = 0; attempt < retryDelaysMs.length; attempt += 1) {
+      if (retryDelaysMs[attempt] > 0) {
+        await sleep(retryDelaysMs[attempt]);
+      }
+
+      const response = await fetch(`${baseUrl}/rr_model?key=state`, { headers });
+
+      if (response.status === 401 || response.status === 403) {
+        sessionKey = "";
+        await connect();
+        return fetchStateModel();
+      }
+
+      if (response.status === 503) {
+        if (attempt < retryDelaysMs.length - 1) {
+          continue;
+        }
+
+        return {
+          raw: null,
+          status: ""
+        };
+      }
+
+      if (!response.ok) {
+        throw new Error(`RRF state rr_model failed (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const state = payload?.result ?? payload?.state ?? payload;
+
+      return {
+        raw: payload,
+        status: String(state?.status ?? "")
+      };
+    }
+
+    return {
+      raw: null,
+      status: ""
+    };
+  }
   return {
     connect,
-    fetchMoveModel
+    fetchMoveModel,
+    fetchStateModel
   };
 }
