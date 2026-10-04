@@ -49,7 +49,12 @@ async function readJson(filePath, fallbackValue) {
 
 async function writeJson(filePath, value) {
   await ensureDataDir();
-  await fs.writeFile(filePath, JSON.stringify(value, null, 2), "utf-8");
+
+  const tempFilePath = `${filePath}.tmp`;
+  const content = JSON.stringify(value, null, 2);
+
+  await fs.writeFile(tempFilePath, content, "utf-8");
+  await fs.rename(tempFilePath, filePath);
 }
 
 export async function loadSettings() {
