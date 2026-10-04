@@ -31,8 +31,17 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
 
     const rrf = createRrfClient(settings.rrf);
     const spoolman = createSpoolmanClient(settings.spoolmanBaseUrl);
-    const model = await rrf.fetchMoveModel();
-    const positions = model.extruderPositions;
+    const [moveModel, stateModel] = await Promise.all([
+      rrf.fetchMoveModel(),
+      rrf.fetchStateModel()
+    ]);
+
+    const positions = moveModel.extruderPositions;
+    const currentStatus = stateModel.status;
+    const previousStatus = trackingState.lastMachineStatus ?? "";
+    const currentlyPrinting = isPrintActive(currentStatus);
+    const previouslyPrinting = isPrintActive(previousStatus);
+    const newPrintStarted = currentlyPrinting && !previouslyPrinting;
     if (!positions.length) {
       return;
     }
@@ -44,9 +53,20 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
     }
 
     const previous = trackingState.lastExtruderPositions;
-    const nextTotals = { ...trackingState.totalTrackedMmByTool };
-    const nextReportedTotals = { ...trackingState.totalReportedMmByTool };
+
+    const nextTotals = newPrintStarted
+      ? {}
+      : { ...trackingState.totalTrackedMmByTool };
+
+    const nextReportedTotals = newPrintStarted
+      ? {}
+      : { ...trackingState.totalReportedMmByTool };
+
     const pollEvents = [];
+
+    if (newPrintStarted) {
+      pollEvents.push(`New print detected (${previousStatus || "unknown"} -> ${currentStatus}); counters reset`);
+    }
     let pollError = null;
     let hadPositiveDelta = false;
 
@@ -54,9 +74,18 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
       const current = Number(positions[i]) || 0;
       const last = Number(previous[i] ?? current);
       const delta = current - last;
+
       if (delta <= 0) {
         continue;
       }
+
+      if (delta > MAX_REASONABLE_DELTA_MM) {
+        pollEvents.push(
+          `${toolKey(i)}: ignored implausible ${delta.toFixed(2)}mm extrusion jump`
+        );
+        continue;
+      }
+
       hadPositiveDelta = true;
 
       const assignedSpoolId = Number(settings.toolSpoolMap[toolKey(i)]);
@@ -84,8 +113,8 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
     await saveTrackingState({
       ...trackingState,
       lastExtruderPositions: positions,
+      lastMachineStatus: currentStatus,
       totalTrackedMmByTool: nextTotals,
-      totalReportedMmByTool: nextReportedTotals,
       lastPollAt: new Date().toISOString(),
       lastError: pollError,
       lastEvent: pollEvents.join(" | ")
