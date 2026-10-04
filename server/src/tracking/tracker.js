@@ -31,10 +31,8 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
 
     const rrf = createRrfClient(settings.rrf);
     const spoolman = createSpoolmanClient(settings.spoolmanBaseUrl);
-    const [moveModel, stateModel] = await Promise.all([
-      rrf.fetchMoveModel(),
-      rrf.fetchStateModel()
-    ]);
+    const stateModel = await rrf.fetchStateModel();
+    const moveModel = await rrf.fetchMoveModel();
 
     const positions = moveModel.extruderPositions;
     const currentStatus = stateModel.status;
