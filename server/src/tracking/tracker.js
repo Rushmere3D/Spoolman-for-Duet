@@ -39,7 +39,12 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
     const previousStatus = trackingState.lastMachineStatus ?? "";
     const currentlyPrinting = isPrintActive(currentStatus);
     const previouslyPrinting = isPrintActive(previousStatus);
-    const newPrintStarted = currentlyPrinting && !previouslyPrinting;
+
+    const newPrintStarted =
+      String(currentStatus).toLowerCase() === "processing" &&
+      String(previousStatus).toLowerCase() === "idle";
+
+    const countTowardPrint = currentlyPrinting || previouslyPrinting;
     if (!positions.length) {
       return;
     }
@@ -88,13 +93,19 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
 
       const assignedSpoolId = Number(settings.toolSpoolMap[toolKey(i)]);
       const key = toolKey(i);
+      if (countTowardPrint) {
       nextTotals[key] = (Number(nextTotals[key]) || 0) + delta;
+      }
 
       if (assignedSpoolId > 0) {
         try {
-          await spoolman.useSpoolLengthMm(assignedSpoolId, delta);
-          nextReportedTotals[key] = (Number(nextReportedTotals[key]) || 0) + delta;
-          pollEvents.push(`${key}: reported ${delta.toFixed(2)}mm to spool #${assignedSpoolId}`);
+      await spoolman.useSpoolLengthMm(assignedSpoolId, delta);
+
+      if (countTowardPrint) {
+      nextReportedTotals[key] = (Number(nextReportedTotals[key]) || 0) + delta;
+      }
+
+      pollEvents.push(`${key}: reported ${delta.toFixed(2)}mm to spool #${assignedSpoolId}`);
         } catch (error) {
           pollError = `${key}: failed to report to spool #${assignedSpoolId}: ${error.message}`;
           pollEvents.push(`${key}: report failed`);
@@ -111,7 +122,7 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
     await saveTrackingState({
       ...trackingState,
       lastExtruderPositions: positions,
-      lastMachineStatus: currentStatus,
+      lastMachineStatus: currentStatus || previousStatus,
       totalTrackedMmByTool: nextTotals,
       totalReportedMmByTool: nextReportedTotals,
       lastPollAt: new Date().toISOString(),
