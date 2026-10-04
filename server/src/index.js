@@ -7,7 +7,7 @@ import { createTracker } from "./tracking/tracker.js";
 import { startMdnsAdvertisement } from "./lib/mdns.js";
 import { buildBridgeBaseUrls, getLanIPv4Addresses } from "./lib/network.js";
 
-const SERVER_VERSION = "1.0.0-beta.1";
+const SERVER_VERSION = "1.0.0-beta.2";
 const PORT = Number(process.env.PORT) || 9377;
 
 const app = express();

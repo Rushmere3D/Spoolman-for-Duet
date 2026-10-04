@@ -11,7 +11,7 @@ const settingsFile = path.join(dataDir, "settings.json");
 const trackingStateFile = path.join(dataDir, "tracking-state.json");
 
 const defaultSettings = Object.freeze({
-  version: "1.0.0-beta.1",
+  version: "1.0.0-beta.2",
   language: "auto",
   spoolmanBaseUrl: "",
   hotendCount: 1,

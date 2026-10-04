@@ -2,7 +2,7 @@
 
 Spoolman integration for Duet printers running RepRapFirmware and Duet Web Control (DWC) 3.7.
 
-> **Status:** `1.0.0-beta.1` — tested during development with a Fysetc BigDipper, RepRapFirmware 3.7.0-beta.3 and DWC 3.7.0-beta.3.
+> **Status:** `1.0.0-beta.2` — tested during development with a Fysetc BigDipper, RepRapFirmware 3.7.0-beta.3 and DWC 3.7.0-beta.3.
 
 This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by Emil Vitus. It keeps the server-driven tracking architecture while porting the DWC frontend to the DWC 3.7 plugin API. See [NOTICE](NOTICE) for attribution.
 
