@@ -21,7 +21,7 @@ if (url.includes("/rr_model?key=state")) {
   return {
     ok: true,
     status: 200,
-    json: async () => ({ result: { status: "idle" } })
+    json: async () => ({ result: { status: "processing" } })
   };
 }
 
@@ -52,7 +52,9 @@ if (url.includes("/rr_model?key=move")) {
   let state = {
     trackingEnabled: true,
     lastExtruderPositions: [],
-    totalTrackedMmByTool: {}
+    totalTrackedMmByTool: {},
+    totalReportedMmByTool: {},
+    lastMachineStatus: "processing"
   };
 
   const tracker = createTracker({
