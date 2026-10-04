@@ -4,7 +4,16 @@ import { createSpoolmanClient } from "../lib/spoolman-client.js";
 function toolKey(toolIndex) {
   return `T${toolIndex}`;
 }
+function isPrintActive(status) {
+  return [
+    "processing",
+    "paused",
+    "pausing",
+    "resuming"
+  ].includes(String(status ?? "").toLowerCase());
+}
 
+const MAX_REASONABLE_DELTA_MM = 1000;
 export function createTracker({ getSettings, saveSettings, getTrackingState, saveTrackingState }) {
   let intervalHandle = null;
   let running = false;
