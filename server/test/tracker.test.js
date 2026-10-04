@@ -17,15 +17,23 @@ test("tracker sends positive filament deltas to spoolman", async () => {
         json: async () => ({ sessionKey: "abc123" })
       };
     }
-    if (url.includes("/rr_model")) {
-      modelCalls += 1;
-      const extruders = modelCalls === 1 ? [100, 20] : [106, 19];
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ result: { extruders } })
-      };
-    }
+if (url.includes("/rr_model?key=state")) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ result: { status: "idle" } })
+  };
+}
+
+if (url.includes("/rr_model?key=move")) {
+  modelCalls += 1;
+  const extruders = modelCalls === 1 ? [100, 20] : [106, 19];
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ result: { extruders } })
+  };
+}
     if (url.includes("/api/v1/spool/")) {
       return {
         ok: true,
