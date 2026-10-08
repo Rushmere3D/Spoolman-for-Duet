@@ -19,6 +19,8 @@
   flex-wrap: wrap;
 }
 
+.spoolman-row-dropdown-open { position: relative; z-index: 100; }
+
 .spoolman-label {
   width: 140px;
   font-weight: 600;
@@ -89,7 +91,8 @@ select.spoolman-input option:checked {
   overflow-y: auto;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 6px;
-  background: var(--v-theme-surface, #292929);
+  background-color: #292929;
+  background-color: rgb(var(--v-theme-surface, 41, 41, 41));
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
