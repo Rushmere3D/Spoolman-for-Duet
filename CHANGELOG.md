@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0-beta.3
+
+### Changed
+- Updated minimum supported Duet Web Control version to 3.7.0-rc.2.
+- Updated minimum supported RepRapFirmware version to 3.7.0-rc.2.
+- Improved Windows plugin ZIP packaging to use standard forward-slash paths.
+- Improved Windows build error handling.
+
+### Compatibility
+- Tested with DWC 3.7.0-rc.2 and RRF 3.7.0-rc.2 on a Fysetc BigDipper.
+- Verified plugin installation, startup, Spoolman bridge connectivity, inventory loading, and spool selection.
+- Compatible with the existing Spoolman for Duet bridge 1.0.0-beta.2. No bridge update required.
+
+### Notes
+- This is a plugin-only compatibility update.
+- Filament tracking functionality remains unchanged.
+
 ## 1.0.0-beta.2
 
 - Add RRF printer-state tracking for reliable print-session detection.
