@@ -846,12 +846,12 @@ var SpoolmanComponent = {
 
       this.connected ? h("div", { class: "spoolman-card" }, [
         h("h3", this.t("tracking", "Tracking")),
-        h("div", { class: "spoolman-row" }, [
+        h("div", { class: "spoolman-row spoolman-tracking-overview" }, [
           h("span", {
             class: "spoolman-tracking-badge " + (this.trackingRunning ? "is-running" : "is-stopped")
           }, this.trackingRunning ? this.t("trackingRunning", "Tracking: Running") : this.t("trackingStopped", "Tracking: Stopped"))
         ]),
-        h("p", this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
+        h("p", { class: "spoolman-muted" }, this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
         this.trackingRunning && this.trackingState.lastError ? h("p", { class: "spoolman-error" }, this.trackingState.lastError) : null,
         this.trackingState.lastEvent ? h("p", { class: "spoolman-muted" }, this.trackingState.lastEvent) : null,
         h("div", { class: "spoolman-row" }, [
