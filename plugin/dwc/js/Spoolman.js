@@ -13,7 +13,7 @@ var SpoolmanComponent = {
   name: "Spoolman",
   data: function () {
     return {
-      version: "1.0.0-beta.3",
+      version: "1.0.0-beta.4",
       serverUrl: "",
       bridgeVersion: "",
       manualServerUrl: "",
@@ -811,7 +811,7 @@ var SpoolmanComponent = {
 
     return h("div", { class: "spoolman-container" }, [
       h("h2", "Spoolman for Duet"),
-      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.3" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
+      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.4" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
       h("p", this.t("appSubtitle", "Tracking runs on server side. Browser can be closed safely.")),
 
       this.error ? h("div", { class: "spoolman-error" }, this.error) : null,
