@@ -222,3 +222,30 @@ select.spoolman-input option:checked {
 .spoolman-success {
   color: #81c784;
 }
+
+.spoolman-dropdown-tools {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px;
+  background-color: #292929;
+  background-color: rgb(var(--v-theme-surface, 41, 41, 41));
+  border-bottom: 1px solid rgba(127,127,127,.3);
+}
+.spoolman-search { width: 100%; min-width: 0; box-sizing: border-box; }
+.spoolman-filter-label { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .86rem; }
+.spoolman-dropdown-empty { padding: 10px; opacity: .75; }
+.spoolman-spool-weight { font-size: .84em; opacity: .8; }
+.spoolman-settings-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 1.15em;
+  font-weight: 600;
+  cursor: pointer;
+}
