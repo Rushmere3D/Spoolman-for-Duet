@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0-beta.4
+
+### Changed
+- Redesigned the spool selector with manufacturer, filament name, material, and spool ID.
+- Added wider single-, dual-, and tri-colour swatches, including for the selected spool.
+- Added spool search, optional empty-spool filtering, and remaining-weight display.
+- Improved dropdown readability and stacking, and moved inventory refresh near spool assignment.
+- Collapsed advanced settings by default and tidied the tracking status display.
+
+### Compatibility
+- Plugin-only UI release for DWC and RRF 3.7.0-rc.2 or later.
+- Continues to use the existing bridge 1.0.0-beta.2; no bridge update required.
+- Filament tracking and bridge logic are unchanged.
+
 ## 1.0.0-beta.3
 
 ### Changed

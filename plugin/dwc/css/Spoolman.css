@@ -19,6 +19,8 @@
   flex-wrap: wrap;
 }
 
+.spoolman-row-dropdown-open { position: relative; z-index: 100; }
+
 .spoolman-label {
   width: 140px;
   font-weight: 600;
@@ -64,6 +66,7 @@ select.spoolman-input option:checked {
 .spoolman-dropdown {
   position: relative;
   min-width: 260px;
+  width: min(100%, 440px);
 }
 
 .spoolman-dropdown-trigger {
@@ -74,6 +77,8 @@ select.spoolman-input option:checked {
   border-radius: 4px;
   cursor: pointer;
   font: inherit;
+  color: inherit;
+  background: rgba(127, 127, 127, 0.12);
 }
 
 .spoolman-dropdown-menu {
@@ -86,7 +91,8 @@ select.spoolman-input option:checked {
   overflow-y: auto;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 6px;
-  background: rgba(30, 30, 30, 0.95);
+  background-color: #292929;
+  background-color: rgb(var(--v-theme-surface, 41, 41, 41));
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -99,6 +105,47 @@ select.spoolman-input option:checked {
   border-bottom: 1px solid rgba(127, 127, 127, 0.2);
   cursor: pointer;
   font: inherit;
+  color: inherit;
+  background-color: transparent;
+}
+
+.spoolman-dropdown-option:hover,
+.spoolman-dropdown-option:focus-visible {
+  background-color: rgba(127, 127, 127, 0.18);
+}
+
+.spoolman-spool-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.spoolman-spool-swatch {
+  display: block;
+  width: 14px;
+  min-width: 14px;
+  height: 42px;
+  border-radius: 4px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+}
+
+.spoolman-spool-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.spoolman-spool-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.spoolman-spool-subtitle {
+  font-size: 0.86em;
+  opacity: 0.76;
 }
 
 .spoolman-dropdown-option:last-child {
@@ -174,4 +221,31 @@ select.spoolman-input option:checked {
 
 .spoolman-success {
   color: #81c784;
+}
+
+.spoolman-dropdown-tools {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px;
+  background-color: #292929;
+  background-color: rgb(var(--v-theme-surface, 41, 41, 41));
+  border-bottom: 1px solid rgba(127,127,127,.3);
+}
+.spoolman-search { width: 100%; min-width: 0; box-sizing: border-box; }
+.spoolman-filter-label { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .86rem; }
+.spoolman-dropdown-empty { padding: 10px; opacity: .75; }
+.spoolman-spool-weight { font-size: .84em; opacity: .8; }
+.spoolman-settings-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 1.15em;
+  font-weight: 600;
+  cursor: pointer;
 }

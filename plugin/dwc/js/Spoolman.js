@@ -13,7 +13,7 @@ var SpoolmanComponent = {
   name: "Spoolman",
   data: function () {
     return {
-      version: "1.0.0-beta.3",
+      version: "1.0.0-beta.4",
       serverUrl: "",
       bridgeVersion: "",
       manualServerUrl: "",
@@ -42,6 +42,9 @@ var SpoolmanComponent = {
       },
       spools: [],
       openToolDropdown: "",
+      spoolSearch: "",
+      availableOnly: false,
+      settingsExpanded: false,
       trackingActionBusy: false,
       discoveryBusy: false,
       statusRefreshTimer: null
@@ -78,6 +81,20 @@ var SpoolmanComponent = {
       }
       return "";
     },
+    getSpoolSwatch: function (spool) {
+      var filament = spool && spool.filament ? spool.filament : {};
+      var raw = filament.multi_color_hexes || filament.multi_color_hexes_csv;
+      var values = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : [];
+      var colors = values.map(this.normalizeHexColor, this).filter(Boolean);
+      if (colors.length < 2) {
+        return colors[0] || this.normalizeHexColor(filament.color_hex) || "#888888";
+      }
+      var stops = [];
+      colors.forEach(function (color, i) {
+        stops.push(color + " " + (100 * i / colors.length) + "%", color + " " + (100 * (i + 1) / colors.length) + "%");
+      });
+      return "linear-gradient(90deg, " + stops.join(", ") + ")";
+    },
     getSpoolPrimaryColor: function (spool) {
       var filament = spool && spool.filament ? spool.filament : {};
       var multi = filament.multi_color_hexes || filament.multi_color_hexes_csv;
@@ -110,12 +127,49 @@ var SpoolmanComponent = {
       }
       return null;
     },
-    getToolDisplayLabel: function (toolId) {
-      var spool = this.getToolAssignedSpool(toolId);
-      if (!spool) {
-        return this.t("notAssigned", "Not assigned");
+    getRemainingGrams: function (spool) {
+      var value = spool.remaining_weight;
+      if (value === null || value === undefined || value === "") {
+        return null;
       }
-      return "#" + spool.id + " - " + (spool.filament && spool.filament.name ? spool.filament.name : "Unknown");
+      var grams = Number(value);
+      return Number.isFinite(grams) && grams >= 0 ? grams : null;
+    },
+    spoolMatchesSearch: function (spool) {
+      var filament = spool.filament || {};
+      var vendor = filament.vendor || {};
+      var manufacturer = typeof vendor === "string" ? vendor : vendor.name || "";
+      var query = this.spoolSearch.trim().toLowerCase();
+      var fields = [spool.id, filament.name, filament.material, manufacturer].join(" ").toLowerCase();
+      return (!query || fields.indexOf(query) !== -1) &&
+        (!this.availableOnly || this.getRemainingGrams(spool) === null || this.getRemainingGrams(spool) > 0);
+    },
+    getSpoolDetails: function (spool) {
+      var filament = spool && spool.filament ? spool.filament : {};
+      var vendor = filament.vendor || {};
+      var manufacturer = typeof vendor === "string" ? vendor : vendor.name;
+      var name = filament.name || "Unknown filament";
+      var material = filament.material || "Unknown material";
+      return {
+        title: (manufacturer ? manufacturer + " — " : "") + name,
+        subtitle: "Spool #" + spool.id + " · " + material,
+        color: this.getSpoolPrimaryColor(spool)
+      };
+    },
+    renderSpoolSummary: function (h, spool) {
+      var details = this.getSpoolDetails(spool);
+      return h("span", { class: "spoolman-spool-summary" }, [
+        h("span", {
+          class: "spoolman-spool-swatch",
+          style: { background: this.getSpoolSwatch(spool) },
+          "aria-hidden": "true"
+        }),
+        h("span", { class: "spoolman-spool-text" }, [
+          h("span", { class: "spoolman-spool-title" }, details.title),
+          h("span", { class: "spoolman-spool-subtitle" }, details.subtitle),
+          h("span", { class: "spoolman-spool-weight" }, this.getRemainingGrams(spool) === null ? "Weight unavailable" : Math.round(this.getRemainingGrams(spool)) + "g remaining")
+        ])
+      ]);
     },
     getToolTrackedUsageMm: function (toolId) {
       var totals = this.trackingState && this.trackingState.totalTrackedMmByTool ? this.trackingState.totalTrackedMmByTool : {};
@@ -146,6 +200,7 @@ var SpoolmanComponent = {
     },
     toggleToolDropdown: function (toolId) {
       this.openToolDropdown = this.openToolDropdown === toolId ? "" : toolId;
+      this.spoolSearch = "";
     },
     closeToolDropdown: function () {
       this.openToolDropdown = "";
@@ -687,57 +742,67 @@ var SpoolmanComponent = {
     var toolRows = tools.map(function (toolId) {
       var selectedSpool = self.getToolAssignedSpool(toolId);
       var selectedColor = selectedSpool ? self.getSpoolPrimaryColor(selectedSpool) : "";
-      var selectedTextColor = self.getTextColorForBackground(selectedColor);
       var dropdownOpen = self.openToolDropdown === toolId;
 
       var optionRows = [
         h("button", {
           class: "spoolman-dropdown-option",
-          style: {
-            backgroundColor: "rgba(127, 127, 127, 0.12)",
-            color: "inherit"
-          },
-          
-            onClick: function () {
-              self.selectToolSpool(toolId, "");
-            }
+          onClick: function () {
+            self.selectToolSpool(toolId, "");
+          }
         }, self.t("notAssigned", "Not assigned"))
       ];
 
       for (var i = 0; i < self.spools.length; i += 1) {
         var spool = self.spools[i];
-        var spoolColor = self.getSpoolPrimaryColor(spool);
-        var textColor = self.getTextColorForBackground(spoolColor);
-        var optionLabel = "#" + spool.id + " - " + (spool.filament && spool.filament.name ? spool.filament.name : "Unknown");
+        if (!self.spoolMatchesSearch(spool)) { continue; }
         optionRows.push(h("button", {
           class: "spoolman-dropdown-option",
-          style: {
-            backgroundColor: spoolColor || "rgba(127, 127, 127, 0.12)",
-            color: spoolColor ? textColor : "inherit"
-          },
-          
-            onClick: function (spoolId) {
-              return function () {
-                self.selectToolSpool(toolId, spoolId);
-              };
-            }(spool.id)
-        }, optionLabel));
+          key: spool.id,
+          onClick: function (spoolId) {
+            return function () {
+              self.selectToolSpool(toolId, spoolId);
+            };
+          }(spool.id)
+        }, self.renderSpoolSummary(h, spool)));
       }
 
-      return h("div", { class: "spoolman-row" }, [
+      if (dropdownOpen) {
+        optionRows.unshift(h("div", { class: "spoolman-dropdown-tools" }, [
+          h("input", {
+            class: "spoolman-input spoolman-search",
+            type: "search",
+            placeholder: "Search spools...",
+            value: self.spoolSearch,
+            onInput: function (event) { self.spoolSearch = event.target.value; },
+            onClick: function (event) { event.stopPropagation(); }
+          }),
+          h("label", { class: "spoolman-filter-label" }, [
+            h("input", {
+              type: "checkbox",
+              checked: self.availableOnly,
+              onChange: function (event) { self.availableOnly = event.target.checked; }
+            }),
+            " Hide empty spools"
+          ])
+        ]));
+        if (optionRows.length === 2 && self.spools.length > 0 &&
+            !self.spools.some(function (spool) { return self.spoolMatchesSearch(spool); })) {
+          optionRows.push(h("div", { class: "spoolman-dropdown-empty" }, "No matching spools"));
+        }
+      }
+
+      return h("div", { class: "spoolman-row" + (dropdownOpen ? " spoolman-row-dropdown-open" : "") }, [
         h("label", { class: "spoolman-label" }, toolId),
         h("div", { class: "spoolman-dropdown" }, [
           h("button", {
             class: "spoolman-dropdown-trigger",
-            style: {
-              backgroundColor: selectedColor || "rgba(127, 127, 127, 0.12)",
-              color: selectedColor ? selectedTextColor : "inherit"
-            },
+
             
               onClick: function () {
                 self.toggleToolDropdown(toolId);
               }
-          }, self.getToolDisplayLabel(toolId)),
+          }, selectedSpool ? self.renderSpoolSummary(h, selectedSpool) : self.t("notAssigned", "Not assigned")),
           dropdownOpen ? h("div", { class: "spoolman-dropdown-menu" }, optionRows) : null
         ]),
         h("span", { class: "spoolman-tool-usage" }, self.formatToolTrackedUsage(toolId))
@@ -746,7 +811,7 @@ var SpoolmanComponent = {
 
     return h("div", { class: "spoolman-container" }, [
       h("h2", "Spoolman for Duet"),
-      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.3" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
+      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.4" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
       h("p", this.t("appSubtitle", "Tracking runs on server side. Browser can be closed safely.")),
 
       this.error ? h("div", { class: "spoolman-error" }, this.error) : null,
@@ -775,17 +840,18 @@ var SpoolmanComponent = {
 
       this.connected ? h("div", { class: "spoolman-card" }, [
         h("h3", this.t("toolToSpoolMapping", "Tool to spool mapping")),
-        toolRows
+        toolRows,
+        h("button", { class: "spoolman-button", onClick: this.loadSpools }, this.t("refreshSpools", "Refresh spools"))
       ]) : null,
 
       this.connected ? h("div", { class: "spoolman-card" }, [
         h("h3", this.t("tracking", "Tracking")),
-        h("div", { class: "spoolman-row" }, [
+        h("div", { class: "spoolman-row spoolman-tracking-overview" }, [
           h("span", {
             class: "spoolman-tracking-badge " + (this.trackingRunning ? "is-running" : "is-stopped")
           }, this.trackingRunning ? this.t("trackingRunning", "Tracking: Running") : this.t("trackingStopped", "Tracking: Stopped"))
         ]),
-        h("p", this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
+        h("p", { class: "spoolman-muted" }, this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
         this.trackingRunning && this.trackingState.lastError ? h("p", { class: "spoolman-error" }, this.trackingState.lastError) : null,
         this.trackingState.lastEvent ? h("p", { class: "spoolman-muted" }, this.trackingState.lastEvent) : null,
         h("div", { class: "spoolman-row" }, [
@@ -799,7 +865,8 @@ var SpoolmanComponent = {
       ]) : null,
 
       this.connected ? h("div", { class: "spoolman-card" }, [
-        h("h3", this.t("settings", "Settings")),
+        h("button", { class: "spoolman-settings-toggle", "aria-expanded": this.settingsExpanded, onClick: function () { self.settingsExpanded = !self.settingsExpanded; } }, this.t("settings", "Settings") + (this.settingsExpanded ? " ▾" : " ▸")),
+        this.settingsExpanded ? h("div", [
         h("div", { class: "spoolman-row" }, [
           h("label", { class: "spoolman-label" }, this.t("language", "Language")),
           h("select", {
@@ -854,8 +921,8 @@ var SpoolmanComponent = {
         ]),
         h("div", { class: "spoolman-row" }, [
           h("button", { class: "spoolman-button",  onClick: this.saveSettings }, this.loading ? this.t("saving", "Saving settings...") : this.t("saveSettings", "Save settings")),
-          h("button", { class: "spoolman-button",  onClick: this.loadSpools }, this.t("refreshSpools", "Refresh spools"))
         ])
+        ]) : null
       ]) : null
     ]);
   }
