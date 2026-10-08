@@ -78,6 +78,20 @@ var SpoolmanComponent = {
       }
       return "";
     },
+    getSpoolSwatch: function (spool) {
+      var filament = spool && spool.filament ? spool.filament : {};
+      var raw = filament.multi_color_hexes || filament.multi_color_hexes_csv;
+      var values = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : [];
+      var colors = values.map(this.normalizeHexColor, this).filter(Boolean);
+      if (colors.length < 2) {
+        return colors[0] || this.normalizeHexColor(filament.color_hex) || "#888888";
+      }
+      var stops = [];
+      colors.forEach(function (color, i) {
+        stops.push(color + " " + (100 * i / colors.length) + "%", color + " " + (100 * (i + 1) / colors.length) + "%");
+      });
+      return "linear-gradient(90deg, " + stops.join(", ") + ")";
+    },
     getSpoolPrimaryColor: function (spool) {
       var filament = spool && spool.filament ? spool.filament : {};
       var multi = filament.multi_color_hexes || filament.multi_color_hexes_csv;
@@ -127,7 +141,7 @@ var SpoolmanComponent = {
       return h("span", { class: "spoolman-spool-summary" }, [
         h("span", {
           class: "spoolman-spool-swatch",
-          style: { backgroundColor: details.color || "rgba(127,127,127,0.35)" },
+          style: { background: this.getSpoolSwatch(spool) },
           "aria-hidden": "true"
         }),
         h("span", { class: "spoolman-spool-text" }, [
@@ -730,7 +744,7 @@ var SpoolmanComponent = {
         }, self.renderSpoolSummary(h, spool)));
       }
 
-      return h("div", { class: "spoolman-row" }, [
+      return h("div", { class: "spoolman-row" + (dropdownOpen ? " spoolman-row-dropdown-open" : "") }, [
         h("label", { class: "spoolman-label" }, toolId),
         h("div", { class: "spoolman-dropdown" }, [
           h("button", {
