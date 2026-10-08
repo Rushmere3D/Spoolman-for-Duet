@@ -2,7 +2,7 @@
 
 Spoolman integration for Duet printers running RepRapFirmware and Duet Web Control (DWC) 3.7.
 
-> **Status:** `1.0.0-beta.3` — tested with a Fysetc BigDipper, RepRapFirmware 3.7.0-rc.2 and Duet Web Control 3.7.0-rc.2. Requires RRF and DWC 3.7.0-rc.2 or later.
+> **Status:** `1.0.0-beta.4` — UI update tested with a Fysetc BigDipper, RepRapFirmware 3.7.0-rc.2 and Duet Web Control 3.7.0-rc.2. Requires RRF and DWC 3.7.0-rc.2 or later.
 
 This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by Emil Vitus. It keeps the server-driven tracking architecture while porting the DWC frontend to the DWC 3.7 plugin API. See [NOTICE](NOTICE) for attribution.
 
@@ -10,7 +10,8 @@ This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by E
 
 - DWC 3.7 Job-page integration
 - Bridge discovery plus manual bridge URL
-- Spoolman spool listing
+- Searchable spool selector with manufacturer, material, remaining weight, and multi-colour swatches
+- Optional empty-spool filtering, quick inventory refresh, and collapsible settings
 - Tool-to-spool assignment
 - Server-side filament consumption tracking (browser may be closed)
 - Persistent settings and tracking state
