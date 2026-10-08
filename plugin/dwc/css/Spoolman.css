@@ -64,6 +64,7 @@ select.spoolman-input option:checked {
 .spoolman-dropdown {
   position: relative;
   min-width: 260px;
+  width: min(100%, 440px);
 }
 
 .spoolman-dropdown-trigger {
@@ -74,6 +75,8 @@ select.spoolman-input option:checked {
   border-radius: 4px;
   cursor: pointer;
   font: inherit;
+  color: inherit;
+  background: rgba(127, 127, 127, 0.12);
 }
 
 .spoolman-dropdown-menu {
@@ -86,7 +89,7 @@ select.spoolman-input option:checked {
   overflow-y: auto;
   border: 1px solid rgba(127, 127, 127, 0.4);
   border-radius: 6px;
-  background: rgba(30, 30, 30, 0.95);
+  background: var(--v-theme-surface, #292929);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -99,6 +102,47 @@ select.spoolman-input option:checked {
   border-bottom: 1px solid rgba(127, 127, 127, 0.2);
   cursor: pointer;
   font: inherit;
+  color: inherit;
+  background-color: transparent;
+}
+
+.spoolman-dropdown-option:hover,
+.spoolman-dropdown-option:focus-visible {
+  background-color: rgba(127, 127, 127, 0.18);
+}
+
+.spoolman-spool-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.spoolman-spool-swatch {
+  display: block;
+  width: 7px;
+  min-width: 7px;
+  height: 42px;
+  border-radius: 4px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+}
+
+.spoolman-spool-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.spoolman-spool-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.spoolman-spool-subtitle {
+  font-size: 0.86em;
+  opacity: 0.76;
 }
 
 .spoolman-dropdown-option:last-child {
