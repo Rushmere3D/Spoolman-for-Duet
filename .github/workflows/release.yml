@@ -31,8 +31,12 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build release artifacts
-        run: npm run build
+      - name: Build plugin artifact
+        run: npm run build:plugin
+
+      - name: Build bridge artifact
+        if: github.ref_name != 'v1.0.0-beta.3'
+        run: npm run build:server
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -41,6 +45,12 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-beta.') || contains(github.ref_name, '-alpha.') || contains(github.ref_name, '-rc.') }}
           files: |
             dist/Spoolman-for-Duet-*.zip
+
+      - name: Attach bridge artifacts
+        if: github.ref_name != 'v1.0.0-beta.3'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
             dist/spoolman-for-duet-bridge-*.zip
             scripts/install-bridge.sh
             scripts/install-bridge-prerelease.sh
