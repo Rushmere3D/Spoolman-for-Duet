@@ -1,6 +1,6 @@
 {
   "name": "spoolman-for-duet",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "private": true,
   "description": "Spoolman integration for DuetWebControl 3.7 with server-side tracking",
   "workspaces": [
