@@ -110,12 +110,31 @@ var SpoolmanComponent = {
       }
       return null;
     },
-    getToolDisplayLabel: function (toolId) {
-      var spool = this.getToolAssignedSpool(toolId);
-      if (!spool) {
-        return this.t("notAssigned", "Not assigned");
-      }
-      return "#" + spool.id + " - " + (spool.filament && spool.filament.name ? spool.filament.name : "Unknown");
+    getSpoolDetails: function (spool) {
+      var filament = spool && spool.filament ? spool.filament : {};
+      var vendor = filament.vendor || {};
+      var manufacturer = typeof vendor === "string" ? vendor : vendor.name;
+      var name = filament.name || "Unknown filament";
+      var material = filament.material || "Unknown material";
+      return {
+        title: (manufacturer ? manufacturer + " — " : "") + name,
+        subtitle: "Spool #" + spool.id + " · " + material,
+        color: this.getSpoolPrimaryColor(spool)
+      };
+    },
+    renderSpoolSummary: function (h, spool) {
+      var details = this.getSpoolDetails(spool);
+      return h("span", { class: "spoolman-spool-summary" }, [
+        h("span", {
+          class: "spoolman-spool-swatch",
+          style: { backgroundColor: details.color || "rgba(127,127,127,0.35)" },
+          "aria-hidden": "true"
+        }),
+        h("span", { class: "spoolman-spool-text" }, [
+          h("span", { class: "spoolman-spool-title" }, details.title),
+          h("span", { class: "spoolman-spool-subtitle" }, details.subtitle)
+        ])
+      ]);
     },
     getToolTrackedUsageMm: function (toolId) {
       var totals = this.trackingState && this.trackingState.totalTrackedMmByTool ? this.trackingState.totalTrackedMmByTool : {};
@@ -687,41 +706,28 @@ var SpoolmanComponent = {
     var toolRows = tools.map(function (toolId) {
       var selectedSpool = self.getToolAssignedSpool(toolId);
       var selectedColor = selectedSpool ? self.getSpoolPrimaryColor(selectedSpool) : "";
-      var selectedTextColor = self.getTextColorForBackground(selectedColor);
       var dropdownOpen = self.openToolDropdown === toolId;
 
       var optionRows = [
         h("button", {
           class: "spoolman-dropdown-option",
-          style: {
-            backgroundColor: "rgba(127, 127, 127, 0.12)",
-            color: "inherit"
-          },
-          
-            onClick: function () {
-              self.selectToolSpool(toolId, "");
-            }
+          onClick: function () {
+            self.selectToolSpool(toolId, "");
+          }
         }, self.t("notAssigned", "Not assigned"))
       ];
 
       for (var i = 0; i < self.spools.length; i += 1) {
         var spool = self.spools[i];
-        var spoolColor = self.getSpoolPrimaryColor(spool);
-        var textColor = self.getTextColorForBackground(spoolColor);
-        var optionLabel = "#" + spool.id + " - " + (spool.filament && spool.filament.name ? spool.filament.name : "Unknown");
         optionRows.push(h("button", {
           class: "spoolman-dropdown-option",
-          style: {
-            backgroundColor: spoolColor || "rgba(127, 127, 127, 0.12)",
-            color: spoolColor ? textColor : "inherit"
-          },
-          
-            onClick: function (spoolId) {
-              return function () {
-                self.selectToolSpool(toolId, spoolId);
-              };
-            }(spool.id)
-        }, optionLabel));
+          key: spool.id,
+          onClick: function (spoolId) {
+            return function () {
+              self.selectToolSpool(toolId, spoolId);
+            };
+          }(spool.id)
+        }, self.renderSpoolSummary(h, spool)));
       }
 
       return h("div", { class: "spoolman-row" }, [
@@ -729,15 +735,12 @@ var SpoolmanComponent = {
         h("div", { class: "spoolman-dropdown" }, [
           h("button", {
             class: "spoolman-dropdown-trigger",
-            style: {
-              backgroundColor: selectedColor || "rgba(127, 127, 127, 0.12)",
-              color: selectedColor ? selectedTextColor : "inherit"
-            },
+
             
               onClick: function () {
                 self.toggleToolDropdown(toolId);
               }
-          }, self.getToolDisplayLabel(toolId)),
+          }, selectedSpool ? self.renderSpoolSummary(h, selectedSpool) : self.t("notAssigned", "Not assigned")),
           dropdownOpen ? h("div", { class: "spoolman-dropdown-menu" }, optionRows) : null
         ]),
         h("span", { class: "spoolman-tool-usage" }, self.formatToolTrackedUsage(toolId))
