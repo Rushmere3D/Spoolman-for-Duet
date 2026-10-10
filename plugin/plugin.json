@@ -1,12 +1,11 @@
 {
   "id": "SpoolmanForDuet",
   "name": "Spoolman for Duet",
-  "author": "Spoolman for Duet contributors; based on work by Emil Vitus",
+  "author": "Rushmere3D",
   "version": "1.0.0-beta.4",
   "license": "GPL-3.0",
   "homepage": "https://github.com/Rushmere3D/Spoolman-for-Duet",
   "dwcVersion": "3.7",
-  "rrfVersion": "3.7",
   "sbcRequired": false,
   "description": "Spoolman integration for DuetWebControl 3.7 with persistent server-side filament tracking."
 }

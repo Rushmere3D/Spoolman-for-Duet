@@ -2,7 +2,7 @@
 
 Spoolman integration for Duet printers running RepRapFirmware and Duet Web Control (DWC) 3.7.
 
-> **Status:** `1.0.0-beta.4` — UI update tested with a Fysetc BigDipper, RepRapFirmware 3.7.0-rc.2 and Duet Web Control 3.7.0-rc.2. Requires RRF and DWC 3.7.0-rc.2 or later.
+> **Status:** `1.0.0-beta.4` — UI update tested with a Fysetc BigDipper, RepRapFirmware 3.7.0-rc.2 and Duet Web Control 3.7.0-rc.2. The plugin declares DWC 3.7 as its minimum requirement; older RRF versions have not yet been validated.
 
 This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by Emil Vitus. It keeps the server-driven tracking architecture while porting the DWC frontend to the DWC 3.7 plugin API. See [NOTICE](NOTICE) for attribution.
 
@@ -28,8 +28,8 @@ This project is a maintained fork/derivative of **Spoolman-DuetWebControl** by E
 
 ## Requirements
 
-- Duet Web Control (DWC) 3.7.0-rc.2 or later
-- RepRapFirmware (RRF) 3.7.0-rc.2 or later
+- Duet Web Control (DWC) 3.7 or later
+- RepRapFirmware (RRF) with compatible HTTP APIs for the bridge (`rr_connect` and `rr_model`); older firmware versions have not yet been validated
 - Node.js 20+ for the bridge
 - Network access from the bridge to both the Duet and Spoolman
 - Spoolman server (default port is normally 7912)
