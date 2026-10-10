@@ -47,7 +47,9 @@ var SpoolmanComponent = {
       settingsExpanded: false,
       trackingActionBusy: false,
       discoveryBusy: false,
-      statusRefreshTimer: null
+      statusRefreshTimer: null,
+      spoolRefreshTimer: null,
+      spoolRefreshBusy: false
     };
   },
   methods: {
@@ -314,6 +316,7 @@ var SpoolmanComponent = {
         this.connected = false;
         this.serverUrl = "";
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast("error", this.t("invalidBridgeUrl", "Invalid bridge server URL. Use http://IP:9377 (or the port configured on your bridge)"));
         return false;
       }
@@ -323,6 +326,7 @@ var SpoolmanComponent = {
         this.connected = false;
         this.serverUrl = "";
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast("error", this.formatMessage("unreachableBridgeUrl", "Could not reach bridge server at {url}", { url: normalized }));
         return false;
       }
@@ -528,6 +532,7 @@ var SpoolmanComponent = {
       await Promise.all([this.loadBridgeInfo(), this.loadSettings(), this.loadStatus()]);
       await this.loadSpools();
       this.startStatusRefresh();
+      this.startSpoolRefresh();
     },
     startStatusRefresh: function () {
       var self = this;
@@ -544,6 +549,26 @@ var SpoolmanComponent = {
       if (this.statusRefreshTimer) {
         clearInterval(this.statusRefreshTimer);
         this.statusRefreshTimer = null;
+      }
+    },
+    startSpoolRefresh: function () {
+      var self = this;
+      this.stopSpoolRefresh();
+      this.spoolRefreshTimer = setInterval(function () {
+        if (!self.connected) {
+          self.stopSpoolRefresh();
+          return;
+        }
+        if (document.visibilityState === "hidden") {
+          return;
+        }
+        self.loadSpools();
+      }, 60000);
+    },
+    stopSpoolRefresh: function () {
+      if (this.spoolRefreshTimer) {
+        clearInterval(this.spoolRefreshTimer);
+        this.spoolRefreshTimer = null;
       }
     },
     connectManualServer: async function () {
@@ -593,6 +618,7 @@ var SpoolmanComponent = {
 
         this.connected = false;
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast(
           "error",
           this.t("discoverFailed", "Could not discover server. Enter IP in Manual server URL and click Connect.")
@@ -672,6 +698,10 @@ var SpoolmanComponent = {
       }
     },
     loadSpools: async function () {
+      if (this.spoolRefreshBusy || !this.connected) {
+        return;
+      }
+      this.spoolRefreshBusy = true;
       try {
         var response = await fetch(this.apiUrl("/api/v1/spools"));
         if (!response.ok) {
@@ -682,6 +712,8 @@ var SpoolmanComponent = {
         this.spools = payload.spools || [];
       } catch (error) {
         this.setToast("error", error.message);
+      } finally {
+        this.spoolRefreshBusy = false;
       }
     },
     setToolSpool: async function (toolId, spoolId) {
@@ -733,6 +765,7 @@ var SpoolmanComponent = {
     this.discoverAndLoad();
   },
   beforeUnmount: function () {
+    this.stopSpoolRefresh();
     this.stopStatusRefresh();
   },
   render: function () {
