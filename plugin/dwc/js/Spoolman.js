@@ -35,6 +35,9 @@ var SpoolmanComponent = {
       resolvedLanguage: "en",
       messages: {},
       trackingRunning: false,
+      diagnosticsExpanded: false,
+      statusRequestOk: false,
+      statusCheckedAt: null,
       trackingState: {
         totalTrackedMmByTool: {},
         lastPollAt: null,
@@ -710,8 +713,11 @@ var SpoolmanComponent = {
         }
         var payload = await response.json();
         this.trackingRunning = payload.trackingRunning;
-        this.trackingState = payload.tracking;
+        this.trackingState = payload.tracking || {};
+        this.statusRequestOk = true;
+        this.statusCheckedAt = Date.now();
       } catch (error) {
+        this.statusRequestOk = false;
         this.setToast("error", error.message);
       }
     },
@@ -910,9 +916,6 @@ var SpoolmanComponent = {
             class: "spoolman-tracking-badge " + (this.trackingRunning ? "is-running" : "is-stopped")
           }, this.trackingRunning ? this.t("trackingRunning", "Tracking: Running") : this.t("trackingStopped", "Tracking: Stopped"))
         ]),
-        h("p", { class: "spoolman-muted" }, this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
-        this.trackingRunning && this.trackingState.lastError ? h("p", { class: "spoolman-error" }, this.trackingState.lastError) : null,
-        this.trackingState.lastEvent ? h("p", { class: "spoolman-muted" }, this.trackingState.lastEvent) : null,
         h("div", { class: "spoolman-row" }, [
           h("button", {
             class: "spoolman-button " + (this.trackingRunning ? "is-danger" : "is-success"),
@@ -920,7 +923,21 @@ var SpoolmanComponent = {
              onClick: function () { self.toggleTracking(); }
           }, this.trackingActionBusy ? this.t("pleaseWait", "Please wait...") : (this.trackingRunning ? this.t("stopTracking", "Stop tracking") : this.t("startTracking", "Start tracking"))),
           h("button", { class: "spoolman-button",  onClick: this.pollNow }, this.t("pollNow", "Poll now"))
-        ])
+        ]),
+        h("button", {
+          class: "spoolman-settings-toggle",
+          "aria-expanded": this.diagnosticsExpanded,
+          onClick: function () { self.diagnosticsExpanded = !self.diagnosticsExpanded; }
+        }, "Diagnostics" + (this.diagnosticsExpanded ? " ▾" : " ▸")),
+        this.diagnosticsExpanded ? h("div", [
+          h("p", { class: "spoolman-muted" }, "Bridge API: " + (this.statusRequestOk ? "Responding" : "Status unavailable")),
+          h("p", { class: "spoolman-muted" }, "RRF polling: " + (!this.trackingRunning ? "Tracking stopped" : this.trackingState.lastError ? "Error reported" : this.trackingState.lastPollAt ? "Last poll recorded" : "Awaiting first poll")),
+          h("p", { class: "spoolman-muted" }, "Spoolman reporting: " + (this.trackingState.lastError ? "Check error below" : "No reporting error currently recorded (not a delivery confirmation)")),
+          h("p", { class: "spoolman-muted" }, "Last poll: " + (this.trackingState.lastPollAt || "Never")),
+          h("p", { class: "spoolman-muted" }, "Last status check: " + (this.statusCheckedAt ? new Date(this.statusCheckedAt).toLocaleTimeString() : "Never")),
+          h("p", { class: "spoolman-muted" }, "Last event: " + (this.trackingState.lastEvent || "None recorded")),
+          this.trackingState.lastError ? h("p", { class: "spoolman-error" }, "Last error: " + this.trackingState.lastError) : null
+        ]) : null
       ]) : null,
 
       this.connected ? h("div", { class: "spoolman-card" }, [
