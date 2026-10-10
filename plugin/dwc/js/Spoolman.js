@@ -703,7 +703,7 @@ var SpoolmanComponent = {
       }
       this.spoolRefreshBusy = true;
       try {
-        var response = await fetch(this.apiUrl("/api/v1/spools"));
+        var response = await fetch(this.apiUrl("/api/v1/spools") + "?_=" + Date.now(), { cache: "no-store" });
         if (!response.ok) {
           var body = await response.json();
           throw new Error(body.error || "Failed to load spools");
