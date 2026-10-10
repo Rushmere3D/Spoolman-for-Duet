@@ -44,6 +44,7 @@ var SpoolmanComponent = {
       openToolDropdown: "",
       spoolSearch: "",
       availableOnly: false,
+      lowFilamentThreshold: 100,
       settingsExpanded: false,
       trackingActionBusy: false,
       discoveryBusy: false,
@@ -137,6 +138,22 @@ var SpoolmanComponent = {
       var grams = Number(value);
       return Number.isFinite(grams) && grams >= 0 ? grams : null;
     },
+    isLowFilament: function (spool) {
+      var grams = this.getRemainingGrams(spool);
+      return grams !== null && grams < this.lowFilamentThreshold;
+    },
+    updateLowFilamentThreshold: function (value) {
+      var number = Number(value);
+      if (!Number.isFinite(number) || number < 0) {
+        return;
+      }
+      this.lowFilamentThreshold = Math.min(10000, number);
+      try {
+        localStorage.setItem("spoolman_low_filament_threshold", String(this.lowFilamentThreshold));
+      } catch (_error) {
+        // Keep the setting in memory if browser storage is unavailable.
+      }
+    },
     spoolMatchesSearch: function (spool) {
       var filament = spool.filament || {};
       var vendor = filament.vendor || {};
@@ -169,7 +186,8 @@ var SpoolmanComponent = {
         h("span", { class: "spoolman-spool-text" }, [
           h("span", { class: "spoolman-spool-title" }, details.title),
           h("span", { class: "spoolman-spool-subtitle" }, details.subtitle),
-          h("span", { class: "spoolman-spool-weight" }, this.getRemainingGrams(spool) === null ? "Weight unavailable" : Math.round(this.getRemainingGrams(spool)) + "g remaining")
+          h("span", { class: "spoolman-spool-weight" }, this.getRemainingGrams(spool) === null ? "Weight unavailable" : Math.round(this.getRemainingGrams(spool)) + "g remaining"),
+          this.isLowFilament(spool) ? h("span", { style: { color: "#d99a24", fontWeight: "600" }, title: "Below the configured low-filament threshold" }, "⚠ Low filament") : null
         ])
       ]);
     },
@@ -761,6 +779,14 @@ var SpoolmanComponent = {
     }
   },
   mounted: function () {
+    try {
+      var storedThreshold = localStorage.getItem("spoolman_low_filament_threshold");
+      if (storedThreshold !== null && storedThreshold !== "") {
+        this.updateLowFilamentThreshold(storedThreshold);
+      }
+    } catch (_error) {
+      // Use the 100g default if browser storage is unavailable.
+    }
     this.manualServerUrl = this.getRememberedBridgeUrl();
     this.discoverAndLoad();
   },
@@ -900,6 +926,15 @@ var SpoolmanComponent = {
       this.connected ? h("div", { class: "spoolman-card" }, [
         h("button", { class: "spoolman-settings-toggle", "aria-expanded": this.settingsExpanded, onClick: function () { self.settingsExpanded = !self.settingsExpanded; } }, this.t("settings", "Settings") + (this.settingsExpanded ? " ▾" : " ▸")),
         this.settingsExpanded ? h("div", [
+        h("div", { class: "spoolman-row" }, [
+          h("label", { class: "spoolman-label" }, "Low-filament warning (g)"),
+          h("input", {
+            class: "spoolman-input", type: "number", min: 0, max: 10000, step: 1,
+            value: this.lowFilamentThreshold,
+            onChange: function (event) { self.updateLowFilamentThreshold(event.target.value); }
+          }),
+          h("span", { class: "spoolman-muted" }, "Warning only · saved in this browser")
+        ]),
         h("div", { class: "spoolman-row" }, [
           h("label", { class: "spoolman-label" }, this.t("language", "Language")),
           h("select", {
