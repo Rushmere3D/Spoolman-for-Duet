@@ -13,7 +13,7 @@ var SpoolmanComponent = {
   name: "Spoolman",
   data: function () {
     return {
-      version: "1.0.0-beta.4",
+      version: "1.0.0-beta.5",
       serverUrl: "",
       bridgeVersion: "",
       manualServerUrl: "",
@@ -35,6 +35,9 @@ var SpoolmanComponent = {
       resolvedLanguage: "en",
       messages: {},
       trackingRunning: false,
+      diagnosticsExpanded: false,
+      statusRequestOk: false,
+      statusCheckedAt: null,
       trackingState: {
         totalTrackedMmByTool: {},
         lastPollAt: null,
@@ -44,10 +47,13 @@ var SpoolmanComponent = {
       openToolDropdown: "",
       spoolSearch: "",
       availableOnly: false,
+      lowFilamentThreshold: 100,
       settingsExpanded: false,
       trackingActionBusy: false,
       discoveryBusy: false,
-      statusRefreshTimer: null
+      statusRefreshTimer: null,
+      spoolRefreshTimer: null,
+      spoolRefreshBusy: false
     };
   },
   methods: {
@@ -135,6 +141,22 @@ var SpoolmanComponent = {
       var grams = Number(value);
       return Number.isFinite(grams) && grams >= 0 ? grams : null;
     },
+    isLowFilament: function (spool) {
+      var grams = this.getRemainingGrams(spool);
+      return grams !== null && grams < this.lowFilamentThreshold;
+    },
+    updateLowFilamentThreshold: function (value) {
+      var number = Number(value);
+      if (!Number.isFinite(number) || number < 0) {
+        return;
+      }
+      this.lowFilamentThreshold = Math.min(10000, number);
+      try {
+        localStorage.setItem("spoolman_low_filament_threshold", String(this.lowFilamentThreshold));
+      } catch (_error) {
+        // Keep the setting in memory if browser storage is unavailable.
+      }
+    },
     spoolMatchesSearch: function (spool) {
       var filament = spool.filament || {};
       var vendor = filament.vendor || {};
@@ -167,7 +189,8 @@ var SpoolmanComponent = {
         h("span", { class: "spoolman-spool-text" }, [
           h("span", { class: "spoolman-spool-title" }, details.title),
           h("span", { class: "spoolman-spool-subtitle" }, details.subtitle),
-          h("span", { class: "spoolman-spool-weight" }, this.getRemainingGrams(spool) === null ? "Weight unavailable" : Math.round(this.getRemainingGrams(spool)) + "g remaining")
+          h("span", { class: "spoolman-spool-weight" }, this.getRemainingGrams(spool) === null ? "Weight unavailable" : Math.round(this.getRemainingGrams(spool)) + "g remaining"),
+          this.isLowFilament(spool) ? h("span", { style: { color: "#d99a24", fontWeight: "600" }, title: "Below the configured low-filament threshold" }, "⚠ Low filament") : null
         ])
       ]);
     },
@@ -314,6 +337,7 @@ var SpoolmanComponent = {
         this.connected = false;
         this.serverUrl = "";
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast("error", this.t("invalidBridgeUrl", "Invalid bridge server URL. Use http://IP:9377 (or the port configured on your bridge)"));
         return false;
       }
@@ -323,6 +347,7 @@ var SpoolmanComponent = {
         this.connected = false;
         this.serverUrl = "";
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast("error", this.formatMessage("unreachableBridgeUrl", "Could not reach bridge server at {url}", { url: normalized }));
         return false;
       }
@@ -528,6 +553,7 @@ var SpoolmanComponent = {
       await Promise.all([this.loadBridgeInfo(), this.loadSettings(), this.loadStatus()]);
       await this.loadSpools();
       this.startStatusRefresh();
+      this.startSpoolRefresh();
     },
     startStatusRefresh: function () {
       var self = this;
@@ -544,6 +570,26 @@ var SpoolmanComponent = {
       if (this.statusRefreshTimer) {
         clearInterval(this.statusRefreshTimer);
         this.statusRefreshTimer = null;
+      }
+    },
+    startSpoolRefresh: function () {
+      var self = this;
+      this.stopSpoolRefresh();
+      this.spoolRefreshTimer = setInterval(function () {
+        if (!self.connected) {
+          self.stopSpoolRefresh();
+          return;
+        }
+        if (document.visibilityState === "hidden") {
+          return;
+        }
+        self.loadSpools();
+      }, 60000);
+    },
+    stopSpoolRefresh: function () {
+      if (this.spoolRefreshTimer) {
+        clearInterval(this.spoolRefreshTimer);
+        this.spoolRefreshTimer = null;
       }
     },
     connectManualServer: async function () {
@@ -593,6 +639,7 @@ var SpoolmanComponent = {
 
         this.connected = false;
         this.stopStatusRefresh();
+        this.stopSpoolRefresh();
         this.setToast(
           "error",
           this.t("discoverFailed", "Could not discover server. Enter IP in Manual server URL and click Connect.")
@@ -666,14 +713,21 @@ var SpoolmanComponent = {
         }
         var payload = await response.json();
         this.trackingRunning = payload.trackingRunning;
-        this.trackingState = payload.tracking;
+        this.trackingState = payload.tracking || {};
+        this.statusRequestOk = true;
+        this.statusCheckedAt = Date.now();
       } catch (error) {
+        this.statusRequestOk = false;
         this.setToast("error", error.message);
       }
     },
     loadSpools: async function () {
+      if (this.spoolRefreshBusy || !this.connected) {
+        return;
+      }
+      this.spoolRefreshBusy = true;
       try {
-        var response = await fetch(this.apiUrl("/api/v1/spools"));
+        var response = await fetch(this.apiUrl("/api/v1/spools") + "?_=" + Date.now(), { cache: "no-store" });
         if (!response.ok) {
           var body = await response.json();
           throw new Error(body.error || "Failed to load spools");
@@ -682,6 +736,8 @@ var SpoolmanComponent = {
         this.spools = payload.spools || [];
       } catch (error) {
         this.setToast("error", error.message);
+      } finally {
+        this.spoolRefreshBusy = false;
       }
     },
     setToolSpool: async function (toolId, spoolId) {
@@ -729,10 +785,19 @@ var SpoolmanComponent = {
     }
   },
   mounted: function () {
+    try {
+      var storedThreshold = localStorage.getItem("spoolman_low_filament_threshold");
+      if (storedThreshold !== null && storedThreshold !== "") {
+        this.updateLowFilamentThreshold(storedThreshold);
+      }
+    } catch (_error) {
+      // Use the 100g default if browser storage is unavailable.
+    }
     this.manualServerUrl = this.getRememberedBridgeUrl();
     this.discoverAndLoad();
   },
   beforeUnmount: function () {
+    this.stopSpoolRefresh();
     this.stopStatusRefresh();
   },
   render: function () {
@@ -811,7 +876,7 @@ var SpoolmanComponent = {
 
     return h("div", { class: "spoolman-container" }, [
       h("h2", "Spoolman for Duet"),
-      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.4" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
+      h("p", { class: "spoolman-muted" }, "Plugin 1.0.0-beta.5" + (this.bridgeVersion ? " · Bridge " + this.bridgeVersion : "")),
       h("p", this.t("appSubtitle", "Tracking runs on server side. Browser can be closed safely.")),
 
       this.error ? h("div", { class: "spoolman-error" }, this.error) : null,
@@ -851,9 +916,6 @@ var SpoolmanComponent = {
             class: "spoolman-tracking-badge " + (this.trackingRunning ? "is-running" : "is-stopped")
           }, this.trackingRunning ? this.t("trackingRunning", "Tracking: Running") : this.t("trackingStopped", "Tracking: Stopped"))
         ]),
-        h("p", { class: "spoolman-muted" }, this.t("lastPoll", "Last poll") + ": " + (this.trackingState.lastPollAt || this.t("never", "Never"))),
-        this.trackingRunning && this.trackingState.lastError ? h("p", { class: "spoolman-error" }, this.trackingState.lastError) : null,
-        this.trackingState.lastEvent ? h("p", { class: "spoolman-muted" }, this.trackingState.lastEvent) : null,
         h("div", { class: "spoolman-row" }, [
           h("button", {
             class: "spoolman-button " + (this.trackingRunning ? "is-danger" : "is-success"),
@@ -861,12 +923,35 @@ var SpoolmanComponent = {
              onClick: function () { self.toggleTracking(); }
           }, this.trackingActionBusy ? this.t("pleaseWait", "Please wait...") : (this.trackingRunning ? this.t("stopTracking", "Stop tracking") : this.t("startTracking", "Start tracking"))),
           h("button", { class: "spoolman-button",  onClick: this.pollNow }, this.t("pollNow", "Poll now"))
-        ])
+        ]),
+        h("button", {
+          class: "spoolman-settings-toggle",
+          "aria-expanded": this.diagnosticsExpanded,
+          onClick: function () { self.diagnosticsExpanded = !self.diagnosticsExpanded; }
+        }, "Diagnostics" + (this.diagnosticsExpanded ? " ▾" : " ▸")),
+        this.diagnosticsExpanded ? h("div", [
+          h("p", { class: "spoolman-muted" }, "Bridge API: " + (this.statusRequestOk ? "Responding" : "Status unavailable")),
+          h("p", { class: "spoolman-muted" }, "RRF polling: " + (!this.trackingRunning ? "Tracking stopped" : this.trackingState.lastError ? "Error reported" : this.trackingState.lastPollAt ? "Last poll recorded" : "Awaiting first poll")),
+          h("p", { class: "spoolman-muted" }, "Spoolman reporting: " + (this.trackingState.lastError ? "Check error below" : "No reporting error currently recorded (not a delivery confirmation)")),
+          h("p", { class: "spoolman-muted" }, "Last poll: " + (this.trackingState.lastPollAt || "Never")),
+          h("p", { class: "spoolman-muted" }, "Last status check: " + (this.statusCheckedAt ? new Date(this.statusCheckedAt).toLocaleTimeString() : "Never")),
+          h("p", { class: "spoolman-muted" }, "Last event: " + (this.trackingState.lastEvent || "None recorded")),
+          this.trackingState.lastError ? h("p", { class: "spoolman-error" }, "Last error: " + this.trackingState.lastError) : null
+        ]) : null
       ]) : null,
 
       this.connected ? h("div", { class: "spoolman-card" }, [
         h("button", { class: "spoolman-settings-toggle", "aria-expanded": this.settingsExpanded, onClick: function () { self.settingsExpanded = !self.settingsExpanded; } }, this.t("settings", "Settings") + (this.settingsExpanded ? " ▾" : " ▸")),
         this.settingsExpanded ? h("div", [
+        h("div", { class: "spoolman-row" }, [
+          h("label", { class: "spoolman-label" }, "Low-filament warning (g)"),
+          h("input", {
+            class: "spoolman-input", type: "number", min: 0, max: 10000, step: 1,
+            value: this.lowFilamentThreshold,
+            onChange: function (event) { self.updateLowFilamentThreshold(event.target.value); }
+          }),
+          h("span", { class: "spoolman-muted" }, "Warning only · saved in this browser")
+        ]),
         h("div", { class: "spoolman-row" }, [
           h("label", { class: "spoolman-label" }, this.t("language", "Language")),
           h("select", {
