@@ -261,3 +261,94 @@ test("idle to processing starts a new print and resets previous counters", async
   assert.equal(useCalls.length, 1);
   assert.equal(JSON.parse(useCalls[0].options.body).use_length, 6);
 });
+
+test("overlapping polls do not process extrusion twice", async () => {
+  let state = {
+    trackingEnabled: true,
+    lastExtruderPositions: [100],
+    totalTrackedMmByTool: {},
+    totalReportedMmByTool: {},
+    lastMachineStatus: "processing"
+  };
+
+  const settings = {
+    spoolmanBaseUrl: "http://spoolman:7912",
+    hotendCount: 1,
+    toolSpoolMap: { T0: 10 },
+    rrf: {
+      baseUrl: "http://duet",
+      password: "",
+      pollIntervalMs: 5000
+    }
+  };
+
+  let usageCalls = 0;
+
+  const originalFetch = global.fetch;
+
+  global.fetch = async (url) => {
+    if (url.includes("/rr_connect")) {
+      return {
+        ok: true,
+        json: async () => ({ sessionKey: "test" })
+      };
+    }
+
+    if (url.includes("/rr_model?key=state")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          result: { status: "processing" }
+        })
+      };
+    }
+
+    if (url.includes("/rr_model?key=move")) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          result: { extruders: [110] }
+        })
+      };
+    }
+
+    if (url.includes("/api/v1/spool/")) {
+      usageCalls += 1;
+
+      return {
+        ok: true,
+        json: async () => ({ ok: true })
+      };
+    }
+
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  try {
+    const tracker = createTracker({
+      getSettings: () => settings,
+      saveSettings: async (next) => next,
+      getTrackingState: () => state,
+      saveTrackingState: async (next) => {
+        state = next;
+        return state;
+      }
+    });
+
+    await Promise.all([
+      tracker.pollNow(),
+      tracker.pollNow(),
+      tracker.pollNow()
+    ]);
+
+    assert.equal(usageCalls, 1);
+    assert.equal(state.totalTrackedMmByTool.T0, 10);
+    assert.equal(state.totalReportedMmByTool.T0, 10);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
