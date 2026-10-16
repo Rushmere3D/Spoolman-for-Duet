@@ -17,6 +17,7 @@ const MAX_REASONABLE_DELTA_MM = 1000;
 export function createTracker({ getSettings, saveSettings, getTrackingState, saveTrackingState }) {
   let intervalHandle = null;
   let running = false;
+  let pollInProgress = false;
 
   async function pollOnce() {
     const settings = getSettings();
@@ -131,9 +132,15 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
     });
   }
 
-  async function safePoll() {
-    try {
-      await pollOnce();
+async function safePoll() {
+  if (pollInProgress) {
+    return;
+  }
+
+  pollInProgress = true;
+
+  try {
+    await pollOnce();
     } catch (error) {
       const state = getTrackingState();
       if (!state.trackingEnabled) {
@@ -151,6 +158,8 @@ export function createTracker({ getSettings, saveSettings, getTrackingState, sav
         lastEvent: `Poll failed: ${error.message}`,
         lastPollAt: new Date().toISOString()
       });
+    } finally {
+      pollInProgress = false;
     }
   }
 
