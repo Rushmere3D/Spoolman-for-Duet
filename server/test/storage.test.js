@@ -136,3 +136,37 @@ test("saving tracking state produces valid JSON", async () => {
     await fs.rm(dataDir, { recursive: true, force: true });
   }
 });
+
+
+test("concurrent tracking-state saves do not collide", async () => {
+  const { dataDir, storage } = await createTestStorage();
+
+  try {
+    const writes = Array.from({ length: 20 }, (_, i) =>
+      storage.saveTrackingState({
+        trackingEnabled: true,
+        lastExtruderPositions: [i],
+        lastEvent: `Write ${i}`
+      })
+    );
+
+    await Promise.all(writes);
+
+    const files = await fs.readdir(dataDir);
+    const content = await fs.readFile(
+      path.join(dataDir, "tracking-state.json"),
+      "utf-8"
+    );
+
+    const state = JSON.parse(content);
+
+    assert.equal(state.trackingEnabled, true);
+    assert.equal(state.lastExtruderPositions.length, 1);
+    assert.equal(
+      files.some((name) => name.endsWith(".tmp")),
+      false
+    );
+  } finally {
+    await fs.rm(dataDir, { recursive: true, force: true });
+  }
+});
