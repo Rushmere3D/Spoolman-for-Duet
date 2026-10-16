@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,11 +54,15 @@ async function readJson(filePath, fallbackValue) {
 async function writeJson(filePath, value) {
   await ensureDataDir();
 
-  const tempFilePath = `${filePath}.tmp`;
+  const tempFilePath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`;
   const content = JSON.stringify(value, null, 2);
 
-  await fs.writeFile(tempFilePath, content, "utf-8");
-  await fs.rename(tempFilePath, filePath);
+  try {
+    await fs.writeFile(tempFilePath, content, "utf-8");
+    await fs.rename(tempFilePath, filePath);
+  } finally {
+    await fs.rm(tempFilePath, { force: true });
+  }
 }
 
 export async function loadSettings() {
